@@ -47,6 +47,15 @@ const std::map<std::string, color> colors= {
     {"orange",  {255, 128,   0}},
     {"lime",    {128, 255,   0}},
     {"purple",  {128,   0, 255}},
+    {"sun",     {241,  93,  34}},
+    {"mercury", {191, 189, 188}},
+    {"venus",   {218, 178, 146}},
+    {"earth",   { 31,  56, 111}},
+    {"mars",    {242, 124,  95}},
+    {"jupiter", {191, 176, 156}},
+    {"saturn",  {218, 183, 120}},
+    {"uranus",  {207, 236, 240}},
+    {"neptune", {120, 158, 191}},
 };
 
 #define SCREEN_WIDTH 800
@@ -61,7 +70,7 @@ const std::map<std::string, color> colors= {
 #define MOVE_SPEED 1.0f
 #define ZOOM_SPEED 0.3f
 #define Z_NEAR 0.1f
-#define Z_FAR 100.0f
+#define Z_FAR 500.0f
 #define MOUSE_SENS 0.15f
 #define PI 3.14159265358979323846f
 #define DEGREE_TO_RADIAN_CONVERTION_FACTOR PI / 180.0f
@@ -293,38 +302,12 @@ void handleReshape(int width, int height){
     glLoadIdentity();
 }
 
-void makeSphere(coord center, GLint radius, color c){
-    glutSolidSphere(radius, 8, 4);
-}
-
-void Face(GLfloat a[],GLfloat b[],GLfloat c[],GLfloat d[]){
-    glBegin(GL_POLYGON);
-    glVertex3fv(a);
-    glVertex3fv(b);
-    glVertex3fv(c);
-    glVertex3fv(d);
-    glEnd();
-}
-
-void Cube(GLfloat V0[],GLfloat V1[],GLfloat V2[],GLfloat V3[],GLfloat V4[],GLfloat V5[],GLfloat V6[],GLfloat V7[]){
-
-    glColor3f(0,1,0);
-    Face(V0,V1,V2,V3);
-
-    glColor3f(1,0,0);
-    Face(V4,V5,V6,V7);
-
-    glColor3f(0,0,1);
-    Face(V0,V3,V7,V4);
-
-    glColor3f(1,1,1);
-    Face(V1,V2,V6,V5);
-
-    glColor3f(1,1,0);
-    Face(V0,V4,V5,V1);
-
-    glColor3f(0,1,1);
-    Face(V3,V7,V6,V2);
+void makeSphere(coord center, GLfloat radius, color c){
+    glColor3f(c.r, c.g, c.b);
+    glPushMatrix();
+    glTranslatef(center.x, center.y, center.z);
+    glutSolidSphere(radius, 16, 4);
+    glPopMatrix();
 }
 
 void draw(){
@@ -336,22 +319,29 @@ void draw(){
     gluLookAt(camPos.x, camPos.y, camPos.z, 
             camPos.x+ camLook.x, camPos.y+ camLook.y, camPos.z+ camLook.z,
             camUp.x, camUp.y, camUp.z);
+    /*
+    planet      radius      orbit radius
+    Sun         6.183	    0
+    Mercury 	0.02167 	2.572
+    Venus 	    0.05374 	4.806
+    Earth 	    0.05658 	6.644
+    Mars 	    0.03011 	10.12
 
-    GLfloat V[8][3] = {
-            {-0.5,0.5,0.5},
-            {0.5,0.5,0.5},
-            {0.5,-0.5,0.5},
-            {-0.5,-0.5,0.5},
-            //here the z is negative
-            {-0.5,0.5,-0.5},
-            {0.5,0.5,-0.5},
-            {0.5,-0.5,-0.5},
-            {-0.5,-0.5,-0.5}
-    };
-    // all draw call under here
-    Cube(V[0],V[1],V[2],V[3],V[4],V[5],V[6],V[7]);
-
-    makeSphere({0, 0, 0}, 10, colors.at("red"));
+    Jupiter 	0.6209 	    34.58
+    Saturn 	    0.5174 	    63.65
+    Uranus 	    0.2253 	    127.8
+    Neptune 	0.2187 	    200.0
+    */
+    float sunRad= 6.183 * 0.5;
+    makeSphere({0, 0, 0}, sunRad, colors.at("sun"));// Sun
+    makeSphere({2.572 * 5, 0, 0}, 0.52167 * 0.5, colors.at("mercury"));// Mercury
+    makeSphere({4.806 * 5, 0, 0}, 0.55374 * 0.5, colors.at("venus"));// Venus
+    makeSphere({6.644 * 5, 0, 0}, 0.55658 * 0.5, colors.at("earth"));// Earth
+    makeSphere({10.12 * 5, 0, 0}, 0.53011 * 0.5, colors.at("mars"));// Mars
+    makeSphere({34.58 * 5, 0, 0}, 1.1209 * 0.5, colors.at("jupiter"));// Jupiter
+    makeSphere({63.65 * 5, 0, 0}, 1.0174 * 0.5, colors.at("saturn"));// Saturn
+    makeSphere({127.8 * 5, 0, 0}, 0.7253 * 0.5, colors.at("uranus"));// Uranus
+    makeSphere({200.0 * 5, 0, 0}, 0.7187 * 0.5, colors.at("neptune"));// Neptune
 
     glutSwapBuffers();
 }
