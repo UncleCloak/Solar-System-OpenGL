@@ -55,6 +55,8 @@ const std::map<std::string, color> colors= {
 #define SCREEN_Y_OFFSET 100
 #define VIEWPORT_X 0
 #define VIEWPORT_Y 0
+#define VERTICAL_ROTATION_POS_LIMIT 89.0f
+#define VERTICAL_ROTATION_NEG_LIMIT -89.0f
 #define FOV 60
 #define MOVE_SPEED 1.0f
 #define ZOOM_SPEED 0.3f
@@ -124,31 +126,22 @@ void handlePassiveMotion(int x, int y){
         }
 
         //# calculate offset from last position
-        int xOffset = x - lastMouseX;
-        int yOffset = lastMouseY - y;
+        horizentalRotation += (x - lastMouseX) * MOUSE_SENS;
+        verticalRotation += (lastMouseY - y) * MOUSE_SENS;
 
-        lastMouseX = x;
-        lastMouseY = y;
-
-        float offsetX = xOffset * MOUSE_SENS;
-        float offsetY = yOffset * MOUSE_SENS;
-
-        horizentalRotation += offsetX;
-        verticalRotation += offsetY;
-
-        if (verticalRotation > 89.0f) verticalRotation = 89.0f;
-        if (verticalRotation < -89.0f) verticalRotation = -89.0f;
+        if (verticalRotation > VERTICAL_ROTATION_POS_LIMIT) verticalRotation = VERTICAL_ROTATION_POS_LIMIT;
+        if (verticalRotation < VERTICAL_ROTATION_NEG_LIMIT) verticalRotation = VERTICAL_ROTATION_NEG_LIMIT;
 
         updateCamLook();
 
         //# centralize cursor to prevent continuous movement crossing the window boundary
-        glutWarpPointer(windowCenterX, windowCenterY);
+        glutWarpPointer(windowCenterX, windowCenterY);//# moves cursor to the given x, y position
 
         //# save the last (for next call) mouse position
         lastMouseX = windowCenterX;
         lastMouseY = windowCenterY;
 
-        glutPostRedisplay();
+        glutPostRedisplay();//# call to reDisplay stuff after moving camera
     }
 }
 
@@ -300,8 +293,8 @@ void handleReshape(int width, int height){
     glLoadIdentity();
 }
 
-void makeSphere(coord center, GLint radius){
-
+void makeSphere(coord center, GLint radius, color c){
+    glutSolidSphere(radius, 8, 4);
 }
 
 void Face(GLfloat a[],GLfloat b[],GLfloat c[],GLfloat d[]){
@@ -358,6 +351,7 @@ void draw(){
     // all draw call under here
     Cube(V[0],V[1],V[2],V[3],V[4],V[5],V[6],V[7]);
 
+    makeSphere({0, 0, 0}, 10, colors.at("red"));
 
     glutSwapBuffers();
 }
