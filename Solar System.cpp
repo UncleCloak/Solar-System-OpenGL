@@ -3,28 +3,36 @@
 #include <string>
 #include <cmath>
 
-struct coord{
+struct coord
+{
     GLfloat x, y, z;
-    coord(GLfloat x, GLfloat y, GLfloat z){
+    coord(GLfloat x, GLfloat y, GLfloat z)
+    {
         this->x= x; this->y= y; this->z= z;
     }
 };
-struct color{
+
+struct color
+{
     GLfloat r, g, b;
-    color(GLint r, GLint g, GLint b){
+    color(GLint r, GLint g, GLint b)
+    {
         this->r= r/255.0; this-> g= g/ 255.0; this->b= b/255.0;
     }
 };
+
 //~ the below are mainly to be used as human reference 
 //~ use the integers straight up when filtering for certain actions
-const std::map<int, std::string> mouseKeys= {
+const std::map<int, std::string> mouseKeys= 
+{
     {0, "leftClick"     },
     {1, "middleClick"   },
     {2, "rightClick"    },
     {3, "scrollUp"      },
     {4, "scrollDown"    },
 };// int clickType in handle mouse
-const std::map<int, std::string> modKeys= {
+const std::map<int, std::string> modKeys= 
+{
     {0, "none"              },
     {1, "shift"             },
     {2, "ctrl"              },
@@ -35,7 +43,8 @@ const std::map<int, std::string> modKeys= {
     {7, "alt+ ctrl+ shift"  },
 }; // glutGetModifiers();
 
-const std::map<std::string, color> colors= {
+const std::map<std::string, color> colors= 
+{
     {"black",   {  0,   0,   0}},
     {"white",   {255, 255, 255}},
     {"red",     {255,   0,   0}},
@@ -89,7 +98,8 @@ int lastMouseY = SCREEN_HEIGHT / 2;
 int windowCenterX = SCREEN_WIDTH / 2;
 int windowCenterY = SCREEN_HEIGHT / 2;
 
-void init(){
+void init()
+{
     glClearColor(0,0,0,0);
     glEnable(GL_DEPTH_TEST);
     // glEnable(GL_CULL_FACE);
@@ -103,7 +113,8 @@ void init(){
     glLoadIdentity();
 }
 
-coord crossProduct(const coord &a, const coord &b){
+coord crossProduct(const coord &a, const coord &b)
+{
     return coord(
         a.y * b.z - a.z * b.y,
         a.z * b.x - a.x * b.z,
@@ -112,7 +123,8 @@ coord crossProduct(const coord &a, const coord &b){
 }
 
 //~ calculation to move the cameraLook vector based on 2D rotation
-void updateCamLook(){
+void updateCamLook()
+{
     //# convert horizentalRotation and verticalRotation from degree to radians
     float horizentalRotationRad = horizentalRotation * DEGREE_TO_RADIAN_CONVERTION_FACTOR;
     float verticalRotationRad = verticalRotation * DEGREE_TO_RADIAN_CONVERTION_FACTOR;
@@ -123,9 +135,12 @@ void updateCamLook(){
     camLook.z = std::cos(verticalRotationRad) * std::sin(horizentalRotationRad);
 }
 
-void handlePassiveMotion(int x, int y){
-    if (inMouseMode){
-        if (firstMouse) {
+void handlePassiveMotion(int x, int y)
+{
+    if (inMouseMode)
+    {
+        if (firstMouse)
+        {
             //# move the cursor to the center of the widow and modify appropriate values
             lastMouseX = windowCenterX;
             lastMouseY = windowCenterY;
@@ -154,17 +169,22 @@ void handlePassiveMotion(int x, int y){
     }
 }
 
-void handleSpecialKeys(int key, int x, int y){
+void handleSpecialKeys(int key, int x, int y)
+{
     coord vertMove = crossProduct(camLook, camUp);
 
-    switch(key){
+    switch(key)
+    {
         case GLUT_KEY_UP:
-            if (inMouseMode){
+            if (inMouseMode)
+            {
                 //# move camera forward
                 camPos.x += camLook.x * MOVE_SPEED;
                 camPos.y += camLook.y * MOVE_SPEED;
                 camPos.z += camLook.z * MOVE_SPEED;
-            } else {
+            }
+            else 
+            {
                 //# move whole camera up along y axis
                 camPos.y += MOVE_SPEED;
             }
@@ -175,29 +195,37 @@ void handleSpecialKeys(int key, int x, int y){
                 camPos.x -= camLook.x * MOVE_SPEED;
                 camPos.y -= camLook.y * MOVE_SPEED;
                 camPos.z -= camLook.z * MOVE_SPEED;
-            } else {
+            }
+            else
+            {
                 //# move whole camera down along y axis
                 camPos.y -= MOVE_SPEED;
             }
             break;
         case GLUT_KEY_RIGHT:
-            if (inMouseMode){
+            if (inMouseMode)
+            {
                 //# move camera rightward
                 camPos.x += vertMove.x * MOVE_SPEED;
                 camPos.y += vertMove.y * MOVE_SPEED;
                 camPos.z += vertMove.z * MOVE_SPEED;
-            } else {
+            }
+            else 
+            {
                 //# move whole camera right along x axis
                 camPos.x += MOVE_SPEED;
             }
             break;
         case GLUT_KEY_LEFT:
-            if (inMouseMode){
+            if (inMouseMode)
+            {
                 //# move camera leftward
                 camPos.x -= vertMove.x * MOVE_SPEED;
                 camPos.y -= vertMove.y * MOVE_SPEED;
                 camPos.z -= vertMove.z * MOVE_SPEED;
-            } else {
+            } 
+            else 
+            {
                 //# move whole camera left along x axis
                 camPos.x -= MOVE_SPEED;
             }
@@ -206,7 +234,8 @@ void handleSpecialKeys(int key, int x, int y){
     glutPostRedisplay();//# call to reDisplay stuff after moving camera
 }
 
-void handleKeys(unsigned char key, int x, int y){
+void handleKeys(unsigned char key, int x, int y)
+{
     coord vertMove = crossProduct(camLook, camUp);
 
     switch(key){
@@ -223,48 +252,60 @@ void handleKeys(unsigned char key, int x, int y){
             break;
         case 'w':
         case 'W':
-            if (inMouseMode){
+            if (inMouseMode)
+            {
                 //# move camera forward
                 camPos.x += camLook.x * MOVE_SPEED;
                 camPos.y += camLook.y * MOVE_SPEED;
                 camPos.z += camLook.z * MOVE_SPEED;
-            } else {
+            }
+            else 
+            {
                 //# move whole camera up along y axis
                 camPos.y += MOVE_SPEED;
             }
             break;
         case 's':
         case 'S':
-            if (inMouseMode){
+            if (inMouseMode)
+            {
                 //# move camera backward
                 camPos.x -= camLook.x * MOVE_SPEED;
                 camPos.y -= camLook.y * MOVE_SPEED;
                 camPos.z -= camLook.z * MOVE_SPEED;
-            } else {
+            }
+            else
+            {
                 //# move whole camera down along y axis
                 camPos.y -= MOVE_SPEED;
             }
             break;
         case 'd':
         case 'D':
-            if (inMouseMode){
+            if (inMouseMode)
+            {
                 //# move camera rightward
                 camPos.x += vertMove.x * MOVE_SPEED;
                 camPos.y += vertMove.y * MOVE_SPEED;
                 camPos.z += vertMove.z * MOVE_SPEED;
-            } else {
+            } 
+            else 
+            {
                 //# move whole camera right along x
                 camPos.x += MOVE_SPEED;
             }
             break;
         case 'a':
         case 'A':
-            if (inMouseMode){
+            if (inMouseMode)
+            {
                 //# move camera leftward
                 camPos.x -= vertMove.x * MOVE_SPEED;
                 camPos.y -= vertMove.y * MOVE_SPEED;
                 camPos.z -= vertMove.z * MOVE_SPEED;
-            } else {
+            }
+            else 
+            {
                 //# move whole camera left along x
                 camPos.x -= MOVE_SPEED;
             }
@@ -273,14 +314,18 @@ void handleKeys(unsigned char key, int x, int y){
     glutPostRedisplay();//# call to reDisplay stuff after moving camera
 }
 
-void handleMouse(int button, int state, int x, int y){
+void handleMouse(int button, int state, int x, int y)
+{
 
-    if (button == 3) {
+    if (button == 3)
+    {
         //# move camera forward on scroolUp
         camPos.x += camLook.x * ZOOM_SPEED;
         camPos.y += camLook.y * ZOOM_SPEED;
         camPos.z += camLook.z * ZOOM_SPEED;
-    } else if (button == 4) {
+    }
+    else if (button == 4) 
+    {
         //# move camera backward on scroolDown
         camPos.x -= camLook.x * ZOOM_SPEED;
         camPos.y -= camLook.y * ZOOM_SPEED;
@@ -290,7 +335,8 @@ void handleMouse(int button, int state, int x, int y){
     glutPostRedisplay();//# call to reDisplay stuff after moving camera
 }
 
-void handleReshape(int width, int height){
+void handleReshape(int width, int height)
+{
     if (height == 0) height = 1;
     glViewport(VIEWPORT_X, VIEWPORT_Y, width, height);
 
@@ -302,7 +348,8 @@ void handleReshape(int width, int height){
     glLoadIdentity();
 }
 
-void makeSphere(coord center, GLfloat radius, color c){
+void makeSphere(coord center, GLfloat radius, color c)
+{
     glColor3f(c.r, c.g, c.b);
     glPushMatrix();
     glTranslatef(center.x, center.y, center.z);
@@ -310,7 +357,8 @@ void makeSphere(coord center, GLfloat radius, color c){
     glPopMatrix();
 }
 
-void draw(){
+void draw()
+{
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -346,7 +394,8 @@ void draw(){
     glutSwapBuffers();
 }
 
-int main(int argc, char* argv[]){
+int main(int argc, char* argv[])
+{
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
