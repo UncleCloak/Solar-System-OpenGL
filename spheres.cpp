@@ -1,41 +1,52 @@
-#include <vector>
-#include <iostream>
 #include <GL/freeglut.h>
 #include <cmath>
 
 const float PI = 3.141592653589f;
 const int SCREEN_SIZE = 800;
 
-class Sphere
+class Planet
 {
     public:
         float radius;
         int sections;
-        float rotationAngle;
-        float rotationSpeed;
+        
+        float axisAngle;
+        float axisSpeed;
 
-        Sphere(float radius, int sections,float speed)
+        float orbitAngle;
+        float orbitSpeed;
+        float orbitDistance; // How far from the Sun
+
+        Planet(float radius, int sections, float axisSpd, float orbitSpd, float distance)
         {
             this->radius = radius;
             this->sections = sections;
-            this->rotationSpeed = speed;
-            rotationAngle = 0.0f;
+            
+            this->axisSpeed = axisSpd;
+            this->axisAngle = 0.0f;
+
+            this->orbitSpeed = orbitSpd;
+            this->orbitAngle = 0.0f;
+            this->orbitDistance = distance;
         }
 
         void update()
         {
-            rotationAngle += rotationSpeed;
-            if(rotationAngle > 360.0f)
-            {
-                rotationAngle -= 360.0f;
-            }
+            axisAngle += axisSpeed;
+            if(axisAngle > 360.0f) axisAngle -= 360.0f;
+
+            orbitAngle += orbitSpeed;
+            if(orbitAngle > 360.0f) orbitAngle -= 360.0f;
         }
 
-        void drawSphere()
+        void draw()
         {
-            glPushMatrix();
+            glPushMatrix(); 
 
-            glRotatef(rotationAngle,0.0f, 1.0f, 0.0f);
+            glRotatef(orbitAngle, 0.0f, 1.0f, 0.0f);
+            glTranslatef(orbitDistance, 0.0f, 0.0f);
+            glRotatef(axisAngle, 0.0f, 1.0f, 0.0f);
+
             for(int i = 0; i < sections; ++i)
             {
                 float phi1 = PI * (-0.5f + (float) i / sections);
@@ -47,41 +58,50 @@ class Sphere
                     float theta = 2 * PI * (float) j / sections;
 
                     float x1 = radius * std::cos(phi1) * std::cos(theta);
-                    float y1 = radius * std::sin(phi1);
-                    float z1 = radius * std::cos(phi1) * std::sin(theta);
+                    float y1 = radius * sin(phi1);
+                    float z1 = radius * std::cos(phi1) * sin(theta);
 
                     float x2 = radius * std::cos(phi2) * std::cos(theta);
-                    float y2 = radius * std::sin(phi2);
-                    float z2 = radius * std::cos(phi2) * std::sin(theta);
+                    float y2 = radius * sin(phi2);
+                    float z2 = radius * std::cos(phi2) * sin(theta);
 
                     glVertex3f(x1, y1, z1);
                     glVertex3f(x2, y2, z2);
                 }
                 glEnd();
             }
-            glPopMatrix();
+            
+            glPopMatrix(); 
         }
 };
 
-Sphere test(0.7, 12, 0.5f);
-void display() {
+Planet sun(0.3f, 20, 0.5f, 0.0f, 0.0f);   
+Planet earth(0.1f, 15, 2.0f, 1.0f, 0.7f);
+
+void display() 
+{
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
 
-    glRotatef(30, 1, 1, 0); 
-    glColor3f(30.0f,0.0f,0.0f);
+    glRotatef(30, 1, 0, 0); 
 
-
-    glColor3f(0.0f, 1.0f, 0.5f); // Seafoam green
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); 
 
-    test.drawSphere();
+    glColor3f(1.0f, 1.0f, 0.0f); 
+    sun.draw();
+
+    glColor3f(0.0f, 0.8f, 1.0f); 
+    earth.draw();
+
     glutSwapBuffers();
 }
 
 void timer(int val)
 {
-    test.update();
+    sun.update();
+    earth.update();
+
     glutPostRedisplay();
     glutTimerFunc(16, timer, 0);
 }
@@ -94,8 +114,7 @@ int main(int argc, char** argv) {
 
     glEnable(GL_DEPTH_TEST);
     glutDisplayFunc(display);
-
-    glutTimerFunc(0, timer, 0);
+    glutTimerFunc(0,timer,0);
     
     glutMainLoop();
     return 0;
