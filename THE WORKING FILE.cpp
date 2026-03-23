@@ -354,6 +354,8 @@ class Planet
     public:
         float radius;
         int sections;
+        color bottomColor;
+        color topColor;
         
         float axisAngle;
         float axisSpeed;
@@ -362,17 +364,17 @@ class Planet
         float orbitSpeed;
         float orbitDistance; // How far from the Sun
 
-        Planet(float radius, int sections, float axisSpd, float orbitSpd, float distance)
+        Planet(float radius, int sections, const color& bottomColor, const color& topColor, float axisSpd, float orbitSpd, float distance)
+            : radius(radius),
+              sections(sections),
+              bottomColor(bottomColor),
+              topColor(topColor),
+              axisAngle(0.0f),
+              axisSpeed(axisSpd),
+              orbitAngle(0.0f),
+              orbitSpeed(orbitSpd),
+              orbitDistance(distance)
         {
-            this->radius = radius;
-            this->sections = sections;
-            
-            this->axisSpeed = axisSpd;
-            this->axisAngle = 0.0f;
-
-            this->orbitSpeed = orbitSpd;
-            this->orbitAngle = 0.0f;
-            this->orbitDistance = distance;
         }
 
         void update()
@@ -410,7 +412,21 @@ class Planet
                     float y2 = radius * sin(phi2);
                     float z2 = radius * std::cos(phi2) * sin(theta);
 
+                    float t1 = (y1 + radius) / (2.0f * radius);
+                    float t2 = (y2 + radius) / (2.0f * radius);
+
+                    glColor3f(
+                        bottomColor.r + t1 * (topColor.r - bottomColor.r),
+                        bottomColor.g + t1 * (topColor.g - bottomColor.g),
+                        bottomColor.b + t1 * (topColor.b - bottomColor.b)
+                    );
                     glVertex3f(x1, y1, z1);
+
+                    glColor3f(
+                        bottomColor.r + t2 * (topColor.r - bottomColor.r),
+                        bottomColor.g + t2 * (topColor.g - bottomColor.g),
+                        bottomColor.b + t2 * (topColor.b - bottomColor.b)
+                    );
                     glVertex3f(x2, y2, z2);
                 }
                 glEnd();
@@ -420,15 +436,15 @@ class Planet
         }
 };
 
-Planet sun(0.35f, 24, 0.4f, 0.0f, 0.0f);
-Planet mercury(0.04f, 12, 1.2f, 4.2f, 0.55f);
-Planet venus(0.07f, 14, 0.8f, 3.2f, 0.8f);
-Planet earth(0.08f, 15, 2.0f, 2.6f, 1.1f);
-Planet mars(0.06f, 13, 1.8f, 2.1f, 1.45f);
-Planet jupiter(0.18f, 18, 2.8f, 1.1f, 2.1f);
-Planet saturn(0.15f, 18, 2.4f, 0.85f, 2.7f);
-Planet uranus(0.11f, 16, 1.9f, 0.55f, 3.2f);
-Planet neptune(0.11f, 16, 1.7f, 0.4f, 3.7f);
+Planet sun(0.35f, 24, color(201, 78, 20), color(255, 195, 80), 0.4f, 0.0f, 0.0f);
+Planet mercury(0.04f, 12, color(120, 118, 117), color(191, 189, 188), 1.2f, 4.2f, 0.55f);
+Planet venus(0.07f, 14, color(160, 120, 88), color(218, 178, 146), 0.8f, 3.2f, 0.8f);
+Planet earth(0.08f, 15, color(20, 90, 45), color(31, 56, 111), 2.0f, 2.6f, 1.1f);
+Planet mars(0.06f, 13, color(166, 72, 52), color(242, 124, 95), 1.8f, 2.1f, 1.45f);
+Planet jupiter(0.18f, 18, color(140, 120, 98), color(191, 176, 156), 2.8f, 1.1f, 2.1f);
+Planet saturn(0.15f, 18, color(168, 138, 78), color(218, 183, 120), 2.4f, 0.85f, 2.7f);
+Planet uranus(0.11f, 16, color(140, 190, 198), color(207, 236, 240), 1.9f, 0.55f, 3.2f);
+Planet neptune(0.11f, 16, color(60, 95, 150), color(120, 158, 191), 1.7f, 0.4f, 3.7f);
 
 void display() 
 {
@@ -441,33 +457,16 @@ void display()
             camPos.x + camLook.x, camPos.y + camLook.y, camPos.z + camLook.z,
             camUp.x, camUp.y, camUp.z);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); 
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); 
 
-    glColor3f(0.95f, 0.55f, 0.15f); 
     sun.draw();
-
-    glColor3f(0.72f, 0.70f, 0.66f);
     mercury.draw();
-
-    glColor3f(0.85f, 0.7f, 0.57f);
     venus.draw();
-
-    glColor3f(0.18f, 0.42f, 0.82f); 
     earth.draw();
-
-    glColor3f(0.95f, 0.48f, 0.37f);
     mars.draw();
-
-    glColor3f(0.75f, 0.69f, 0.61f);
     jupiter.draw();
-
-    glColor3f(0.86f, 0.72f, 0.47f);
     saturn.draw();
-
-    glColor3f(0.7f, 0.9f, 0.94f);
     uranus.draw();
-
-    glColor3f(0.47f, 0.62f, 0.86f);
     neptune.draw();
 
     glutSwapBuffers();
