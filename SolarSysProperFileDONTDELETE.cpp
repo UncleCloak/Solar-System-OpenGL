@@ -77,7 +77,7 @@ const std::map<std::string, color> colors=
 #define VERTICAL_ROTATION_POS_LIMIT 89.0f
 #define VERTICAL_ROTATION_NEG_LIMIT -89.0f
 #define FOV 60
-#define MOVE_SPEED 1.0f
+#define MOVE_SPEED 0.5f
 #define ZOOM_SPEED 0.3f
 #define Z_NEAR 0.1f
 #define Z_FAR 500.0f
@@ -85,13 +85,13 @@ const std::map<std::string, color> colors=
 #define PI 3.14159265358979323846f
 #define DEGREE_TO_RADIAN_CONVERTION_FACTOR PI / 180.0f
 
-coord camPos= {0.0, 3.0, 0.0};      // 0.0, 0.0, 3.0
-coord camLook= {0.0, -1.0, 0.0};    // 0.0, 0.0, -1.0
-coord camUp= {0.0, 0.0, -1.0};      // 0.0, 1.0, 0.0
+coord camPos = {-7.0, 2.7, -7.0};     // 0.0, 0.0, 3.0
+coord camLook= {7.0, -2.7, 7.0};          // 0.0, 0.0, -1.0
+coord camUp  = {0.0, 1.0, 0.0};         // 0.0, 1.0, 0.0
 
 float angle= 0.0f;
-float horizentalRotation = -90.0f;
-float verticalRotation = -89.0f;    // 0.0f
+float horizentalRotation = 0.0f;
+float verticalRotation = 0.0f;    // 0.0f
 bool firstMouse = true;
 bool inMouseMode = false;
 int lastMouseX = SCREEN_WIDTH / 2;
@@ -158,7 +158,6 @@ void handlePassiveMotion(int x, int y)
         if (verticalRotation < VERTICAL_ROTATION_NEG_LIMIT) verticalRotation = VERTICAL_ROTATION_NEG_LIMIT;
 
         updateCamLook();
-
         //# centralize cursor to prevent continuous movement crossing the window boundary
         glutWarpPointer(windowCenterX, windowCenterY);//# moves cursor to the given x, y position
 
@@ -167,6 +166,7 @@ void handlePassiveMotion(int x, int y)
         lastMouseY = windowCenterY;
 
         glutPostRedisplay();//# call to reDisplay stuff after moving camera
+        // printf("camPos= {%d, %d, %d} camLook= {%d, %d, %d} camUp= {%d, %d, %d}\n", camPos.x, camPos.y, camPos.z, camLook.x, camLook.y, camLook.z, camUp.x, camUp.y, camUp.z);
     }
 }
 
