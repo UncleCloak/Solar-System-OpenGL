@@ -1,8 +1,8 @@
 #include <GL/freeglut.h>
 #include <cmath>
 
-const float PI = 3.141592653589f;
-const int SCREEN_SIZE = 800;
+#define PI 3.141592653589f
+#define SCREEN_SIZE 800
 
 class Planet
 {
@@ -109,7 +109,7 @@ void timer(int val)
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowSize(800, 600);
+    glutInitWindowSize(SCREEN_SIZE, SCREEN_SIZE);
     glutCreateWindow("OpenGL Sphere Math Test");
 
     glEnable(GL_DEPTH_TEST);
