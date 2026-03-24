@@ -3,7 +3,14 @@
 #include <GL/glut.h>
 #include <map>
 #include <string>
-
+/*
+$ TODO-List:
+$ SCATERED STARS
+$ ASTROID FIELDS (close one between mars and jupiter and far one beyond neptune)
+$ ORBIT TRAILS (if possible ones that fade out)
+$ PLANET RINGS (where needed mainly saturn and uranus)
+$ MOONS (primiraly covers earths moon but maybe mars two moons or some of jupiters many many moons)
+*/
 struct coord
 {
     GLfloat x, y, z;
