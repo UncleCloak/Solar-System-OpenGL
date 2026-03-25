@@ -10,7 +10,6 @@ $ TODO-List:
 $ SCATERED STARS
 $ ASTROID FIELDS (close one between mars and jupiter and far one beyond neptune)
 $ PLANET RINGS (where needed mainly saturn and uranus)
-$ MOONS (primiraly covers earths moon but maybe mars two moons or some of jupiters many many moons)
 */
 struct coord
 {
