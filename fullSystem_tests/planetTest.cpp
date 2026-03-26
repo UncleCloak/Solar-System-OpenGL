@@ -1,20 +1,16 @@
 #include <GL/freeglut.h>
 #include <cmath>
-#include <deque>
 #include <GL/glut.h>
 #include <map>
 #include <string>
+
 /*
-* github Handle of students working on this project: ELementaleLord, Faust, UncleCloak
-$ TODO-List:
-$ SCATERED STARS
-$ ASTROID FIELDS (close one between mars and jupiter and far one beyond neptune)
-$ PLANET RINGS (where needed mainly saturn and uranus)
-$ MOONS (primiraly covers earths moon but maybe mars two moons or some of jupiters many many moons)
+* github Handle of students working on this project: ELementaleLord, Faust, uncleCloak
 */
 struct coord
 {
     GLfloat x, y, z;
+    coord(){}
     coord(GLfloat x, GLfloat y, GLfloat z)
     {
         this->x= x; this->y= y; this->z= z;
@@ -24,6 +20,7 @@ struct coord
 struct color
 {
     GLfloat r, g, b;
+    color(){}
     color(GLint r, GLint g, GLint b)
     {
         this->r= r/255.0; this-> g= g/ 255.0; this->b= b/255.0;
@@ -92,9 +89,10 @@ const std::map<std::string, color> colors=
 #define MOUSE_SENS 0.15f
 #define PI 3.14159265358979323846f
 #define DEGREE_TO_RADIAN_CONVERTION_FACTOR PI / 180.0f
-#define ORBIT_LINE_ALPHA 0.45f
-#define ORBIT_LINE_WIDTH 2.0f
-#define TRAIL_MAX_POINTS 100
+#define starTotal 1000
+#define starDistMin 2
+#define starDistRange 100
+#define starPointScale 1.5
 
 coord camPos = {-7.0, 2.7, -7.0};     // 0.0, 0.0, 3.0
 coord camLook= {7.0, -2.7, 7.0};          // 0.0, 0.0, -1.0
@@ -109,21 +107,6 @@ int lastMouseX = SCREEN_WIDTH / 2;
 int lastMouseY = SCREEN_HEIGHT / 2;
 int windowCenterX = SCREEN_WIDTH / 2;
 int windowCenterY = SCREEN_HEIGHT / 2;
-
-void init()
-{
-    glClearColor(0,0,0,0);
-    glEnable(GL_DEPTH_TEST);
-    // glEnable(GL_CULL_FACE);
-    // glCullFace(GL_BACK);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(FOV, (GLdouble)SCREEN_WIDTH / (GLdouble)SCREEN_HEIGHT, Z_NEAR, Z_FAR);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-}
 
 coord crossProduct(const coord &a, const coord &b)
 {
@@ -374,7 +357,6 @@ class Planet
         float orbitAngle;
         float orbitSpeed;
         float orbitDistance; // How far from the Sun
-        std::deque<coord> orbitTrail;
 
         Planet(float radius, int sections, const color& bottomColor, const color& topColor, float axisSpd, float orbitSpd, float distance)
             : radius(radius),
@@ -387,10 +369,6 @@ class Planet
               orbitSpeed(orbitSpd),
               orbitDistance(distance)
         {
-            if (orbitDistance > 0.0f)
-            {
-                orbitTrail.push_back(getOrbitPosition());
-            }
         }
 
         void update()
@@ -400,27 +378,6 @@ class Planet
 
             orbitAngle += orbitSpeed;
             if(orbitAngle > 360.0f) orbitAngle -= 360.0f;
-
-            if (orbitDistance > 0.0f)
-            {
-                //! push_back add the current position of the planet so the trail starts rendering
-                orbitTrail.push_back(getOrbitPosition());
-                if (orbitTrail.size() > TRAIL_MAX_POINTS)
-                {
-                    //! pop_front removes the the oldest points to give the dafing out effect
-                    orbitTrail.pop_front();
-                }
-            }
-        }
-
-        coord getOrbitPosition() const
-        {
-            float orbitAngleRadians = orbitAngle * DEGREE_TO_RADIAN_CONVERTION_FACTOR;
-            return coord(
-                orbitDistance * std::cos(orbitAngleRadians),    // x coord
-                0.0f,                                           // y coord
-                -orbitDistance * std::sin(orbitAngleRadians)    // z coord
-            );
         }
 
         void draw()
@@ -471,21 +428,6 @@ class Planet
             
             glPopMatrix(); 
         }
-
-        void drawOrbitTrail() const
-        {
-            if (orbitTrail.size() < 2) return;
-
-            glBegin(GL_LINE_STRIP);
-            for (size_t i = 0; i < orbitTrail.size(); ++i)
-            {
-                float fade = static_cast<float>(i + 1) / static_cast<float>(orbitTrail.size());
-                fade *= fade;
-                glColor4f(topColor.r, topColor.g, topColor.b, ORBIT_LINE_ALPHA * fade);
-                glVertex3f(orbitTrail[i].x, orbitTrail[i].y, orbitTrail[i].z);
-            }
-            glEnd();
-        }
 };
 
 Planet sun(0.35f, 24, color(201, 78, 20), color(255, 195, 80), 0.4f, 0.0f, 0.0f);
@@ -510,26 +452,6 @@ void display()
             camUp.x, camUp.y, camUp.z);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); 
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_LINE_SMOOTH);
-    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-    glLineWidth(ORBIT_LINE_WIDTH);
-    glDepthMask(GL_FALSE);
-
-    mercury.drawOrbitTrail();
-    venus.drawOrbitTrail();
-    earth.drawOrbitTrail();
-    mars.drawOrbitTrail();
-    jupiter.drawOrbitTrail();
-    saturn.drawOrbitTrail();
-    uranus.drawOrbitTrail();
-    neptune.drawOrbitTrail();
-
-    glDepthMask(GL_TRUE);
-    glDisable(GL_LINE_SMOOTH);
-    glDisable(GL_BLEND);
 
     sun.draw();
     mercury.draw();
@@ -565,9 +487,21 @@ int main(int argc, char** argv) {
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
     glutInitWindowPosition(SCREEN_X_OFFSET, SCREEN_Y_OFFSET);
-    glutCreateWindow("Cloak Testing");
+    glutCreateWindow("Full Solar System Planet Test");
 
-    init();
+    //init
+    glClearColor(0,0,0,0);
+    glEnable(GL_DEPTH_TEST);
+    // glEnable(GL_CULL_FACE);
+    // glCullFace(GL_BACK);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(FOV, (GLdouble)SCREEN_WIDTH / (GLdouble)SCREEN_HEIGHT, Z_NEAR, Z_FAR);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    //init
 
     glEnable(GL_DEPTH_TEST);
     glutDisplayFunc(display);

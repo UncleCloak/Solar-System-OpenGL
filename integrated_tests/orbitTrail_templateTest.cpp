@@ -1,10 +1,25 @@
 #include <GL/freeglut.h>
 #include <cmath>
+#include <deque>
 #include <GL/glut.h>
 #include <map>
 #include <string>
-#include <cmath>
 
+/*
+* github Handle of students working on this project: ELementaleLord, Faust, uncleCloak
+$ TODO-List:
+$ PLANET RINGS
+$ ASTROID FIELDS
+$ GALAXY SKYBOX 
+& COMPLETED-LIST:
+& MODULAR BLANK PLANET credited to faust
+& 3D CAMERA credited to elementaleLord
+& PLANET GRADIENTS credited to uncleCloak
+& TRUE SOLAR SYSTEM credited to everyone
+& SCATERED STARS cerdited to elementaleLord
+& MOONS credited to uncleCloak
+& ORBIT TRAILS credited to uncleCloak
+*/
 struct coord
 {
     GLfloat x, y, z;
@@ -14,7 +29,6 @@ struct coord
         this->x= x; this->y= y; this->z= z;
     }
 };
-
 struct color
 {
     GLfloat r, g, b;
@@ -24,6 +38,7 @@ struct color
         this->r= r/255.0; this-> g= g/ 255.0; this->b= b/255.0;
     }
 };
+
 
 //~ the below are mainly to be used as human reference 
 //~ use the integers straight up when filtering for certain actions
@@ -71,13 +86,6 @@ const std::map<std::string, color> colors=
     {"neptune", {120, 158, 191}},
 };
 
-struct star
-{
-    coord p;
-    color c;
-    star(){ this->c = colors.at("white"); };
-};
-
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 #define SCREEN_X_OFFSET 300
@@ -87,7 +95,7 @@ struct star
 #define VERTICAL_ROTATION_POS_LIMIT 89.0f
 #define VERTICAL_ROTATION_NEG_LIMIT -89.0f
 #define FOV 60
-#define MOVE_SPEED 1.0f
+#define MOVE_SPEED 0.5f
 #define ZOOM_SPEED 0.3f
 #define Z_NEAR 0.1f
 #define Z_FAR 500.0f
@@ -95,24 +103,24 @@ struct star
 #define PI 3.14159265358979323846f
 #define DEGREE_TO_RADIAN_CONVERTION_FACTOR PI / 180.0f
 
-coord camPos= {-9.0, 0.0, -9.0};
-coord camLook= {5.0, 0.0, 5.0};
-coord camUp= {0.0, 1.0, 0.0};
+#define ORBIT_LINE_ALPHA 0.45f
+#define ORBIT_LINE_WIDTH 2.0f
+#define TRAIL_MAX_POINTS 100
+#define MOON_TRAIL_MAX_POINTS (TRAIL_MAX_POINTS / 10)
+
+coord camPos = {-2.0, 3.0, -2.0};     // 0.0, 0.0, 3.0
+coord camLook= {2.0, -3.0, 2.0};          // 0.0, 0.0, -1.0
+coord camUp  = {0.0, 1.0, 0.0};         // 0.0, 1.0, 0.0
 
 float angle= 0.0f;
 float horizentalRotation = 0.0f;
-float verticalRotation = 0.0f;
+float verticalRotation = 0.0f;    // 0.0f
 bool firstMouse = true;
 bool inMouseMode = false;
 int lastMouseX = SCREEN_WIDTH / 2;
 int lastMouseY = SCREEN_HEIGHT / 2;
 int windowCenterX = SCREEN_WIDTH / 2;
 int windowCenterY = SCREEN_HEIGHT / 2;
-
-
-#define SCREEN_SIZE 800
-#define StarTotal 1000
-star starPosArr[StarTotal];
 
 coord crossProduct(const coord &a, const coord &b)
 {
@@ -158,7 +166,6 @@ void handlePassiveMotion(int x, int y)
         if (verticalRotation < VERTICAL_ROTATION_NEG_LIMIT) verticalRotation = VERTICAL_ROTATION_NEG_LIMIT;
 
         updateCamLook();
-
         //# centralize cursor to prevent continuous movement crossing the window boundary
         glutWarpPointer(windowCenterX, windowCenterY);//# moves cursor to the given x, y position
 
@@ -167,6 +174,7 @@ void handlePassiveMotion(int x, int y)
         lastMouseY = windowCenterY;
 
         glutPostRedisplay();//# call to reDisplay stuff after moving camera
+        // printf("camPos= {%d, %d, %d} camLook= {%d, %d, %d} camUp= {%d, %d, %d}\n", camPos.x, camPos.y, camPos.z, camLook.x, camLook.y, camLook.z, camUp.x, camUp.y, camUp.z);
     }
 }
 
@@ -349,68 +357,291 @@ void handleReshape(int width, int height)
     glLoadIdentity();
 }
 
-
-void makeSphere(coord center, GLfloat radius, color c)
+class Planet
 {
-    glColor3f(c.r, c.g, c.b);
-    glPushMatrix();
-        glTranslatef(center.x, center.y, center.z);
-        glutSolidSphere(radius, 4, 4);
-    glPopMatrix();
-}
+    public:
+        float radius;
+        int sections;
+        color bottomColor;
+        color topColor;
+        
+        float axisAngle;
+        float axisSpeed;
 
+        float orbitAngle;
+        float orbitSpeed;
+        float orbitDistance; // How far from the Sun
+        std::deque<coord> orbitTrail;
 
-#define starDistMin 2
-#define starDistRange 100
-#define starPointScale 1.5
+        Planet(float radius, int sections, const color& bottomColor, const color& topColor, float axisSpd, float orbitSpd, float distance)
+            : radius(radius),
+              sections(sections),
+              bottomColor(bottomColor),
+              topColor(topColor),
+              axisAngle(0.0f),
+              axisSpeed(axisSpd),
+              orbitAngle(0.0f),
+              orbitSpeed(orbitSpd),
+              orbitDistance(distance)
+        {
+            if (orbitDistance > 0.0f)
+            {
+                orbitTrail.push_back(getOrbitPosition());
+            }
+        }
 
-void generateStars(){
-    for (int i= 0; i< StarTotal; i++ ){
+        void update()
+        {
+            axisAngle += axisSpeed;
+            if(axisAngle > 360.0f) axisAngle -= 360.0f;
 
-        float theta=    ((float)rand() / RAND_MAX) * 2.0f * PI;
-        float phi=      acosf(1.0f - 2.0f * ((float)rand() / RAND_MAX));// vertical angle
-        float radius=   starDistMin + starDistRange * ((float)rand() / RAND_MAX);
+            orbitAngle += orbitSpeed;
+            if(orbitAngle > 360.0f) orbitAngle -= 360.0f;
 
-        starPosArr[i].p.x= radius * sinf(phi) * cosf(theta);
-        starPosArr[i].p.y= radius * cosf(phi);
-        starPosArr[i].p.z= radius * sinf(phi) * sinf(theta);
-        // printf("x= %f, y=%f, z=%f\n", starPosArr[i].p.x, starPosArr[i].p.y, starPosArr[i].p.z);
-    }
-}
-void drawStars(){
-    glPointSize(starPointScale);
-    glBegin(GL_POINTS);
-    for (int i= 0; i< StarTotal; i++){
-        glColor3f(starPosArr[i].c.r, starPosArr[i].c.g, starPosArr[i].c.b);
-        glVertex3f(starPosArr[i].p.x, starPosArr[i].p.y, starPosArr[i].p.z);
-    }
-    glEnd();
-}
+            if (orbitDistance > 0.0f)
+            {
+                //! push_back add the current position of the planet so the trail starts rendering
+                orbitTrail.push_back(getOrbitPosition());
+                if (orbitTrail.size() > TRAIL_MAX_POINTS)
+                {
+                    //! pop_front removes the the oldest points to give the dafing out effect
+                    orbitTrail.pop_front();
+                }
+            }
+        }
 
-void draw() 
+        coord getOrbitPosition() const
+        {
+            float orbitAngleRadians = orbitAngle * DEGREE_TO_RADIAN_CONVERTION_FACTOR;
+            return coord(
+                orbitDistance * std::cos(orbitAngleRadians),    // x coord
+                0.0f,                                           // y coord
+                -orbitDistance * std::sin(orbitAngleRadians)    // z coord
+            );
+        }
+
+        void draw()
+        {
+            glPushMatrix(); 
+
+            glRotatef(orbitAngle, 0.0f, 1.0f, 0.0f);
+            glTranslatef(orbitDistance, 0.0f, 0.0f);
+            glRotatef(axisAngle, 0.0f, 1.0f, 0.0f);
+
+            for(int i = 0; i < sections; ++i)
+            {
+                float phi1 = PI * (-0.5f + (float) i / sections);
+                float phi2 = PI * (-0.5f + (float) (i + 1) / sections);
+
+                glBegin(GL_QUAD_STRIP);
+                for(int j = 0; j <= sections; j++)
+                {
+                    float theta = 2 * PI * (float) j / sections;
+
+                    float x1 = radius * std::cos(phi1) * std::cos(theta);
+                    float y1 = radius * sin(phi1);
+                    float z1 = radius * std::cos(phi1) * sin(theta);
+
+                    float x2 = radius * std::cos(phi2) * std::cos(theta);
+                    float y2 = radius * sin(phi2);
+                    float z2 = radius * std::cos(phi2) * sin(theta);
+
+                    float t1 = (y1 + radius) / (2.0f * radius);
+                    float t2 = (y2 + radius) / (2.0f * radius);
+
+                    glColor3f(
+                        bottomColor.r + t1 * (topColor.r - bottomColor.r),
+                        bottomColor.g + t1 * (topColor.g - bottomColor.g),
+                        bottomColor.b + t1 * (topColor.b - bottomColor.b)
+                    );
+                    glVertex3f(x1, y1, z1);
+
+                    glColor3f(
+                        bottomColor.r + t2 * (topColor.r - bottomColor.r),
+                        bottomColor.g + t2 * (topColor.g - bottomColor.g),
+                        bottomColor.b + t2 * (topColor.b - bottomColor.b)
+                    );
+                    glVertex3f(x2, y2, z2);
+                }
+                glEnd();
+            }
+            
+            glPopMatrix(); 
+        }
+
+        void drawOrbitTrail() const
+        {
+            if (orbitTrail.size() < 2) return;
+
+            glBegin(GL_LINE_STRIP);
+            for (size_t i = 0; i < orbitTrail.size(); ++i)
+            {
+                float fade = static_cast<float>(i + 1) / static_cast<float>(orbitTrail.size());
+                fade *= fade;
+                glColor4f(topColor.r, topColor.g, topColor.b, ORBIT_LINE_ALPHA * fade);
+                glVertex3f(orbitTrail[i].x, orbitTrail[i].y, orbitTrail[i].z);
+            }
+            glEnd();
+        }
+};
+
+class Moon : public Planet
 {
+    public:
+        Planet& parentPlanet;
+
+        Moon(float radius, int sections, const color& bottomColor, const color& topColor, float axisSpd, float orbitSpd, float distance, Planet& parent)
+            : Planet(radius, sections, bottomColor, topColor, axisSpd, orbitSpd, distance),
+              parentPlanet(parent)
+        {
+            orbitTrail.clear();
+            if (orbitDistance > 0.0f)
+            {
+                orbitTrail.push_back(getOrbitPosition());
+            }
+        }
+
+        void update()
+        {
+            axisAngle += axisSpeed;
+            if(axisAngle > 360.0f) axisAngle -= 360.0f;
+
+            orbitAngle += orbitSpeed;
+            if(orbitAngle > 360.0f) orbitAngle -= 360.0f;
+
+            if (orbitDistance > 0.0f)
+            {
+                orbitTrail.push_back(getOrbitPosition());
+                if (orbitTrail.size() > MOON_TRAIL_MAX_POINTS)
+                {
+                    orbitTrail.pop_front();
+                }
+            }
+        }
+
+        coord getOrbitPosition() const
+        {
+            float orbitAngleRadians = orbitAngle * DEGREE_TO_RADIAN_CONVERTION_FACTOR;
+            coord parentPosition = parentPlanet.getOrbitPosition();
+
+            return coord(
+                parentPosition.x + orbitDistance * std::cos(orbitAngleRadians),
+                parentPosition.y,
+                parentPosition.z - orbitDistance * std::sin(orbitAngleRadians)
+            );
+        }
+
+        void draw()
+        {
+            coord parentPosition = parentPlanet.getOrbitPosition();
+
+            glPushMatrix();
+
+            glTranslatef(parentPosition.x, parentPosition.y, parentPosition.z);
+            glRotatef(orbitAngle, 0.0f, 1.0f, 0.0f);
+            glTranslatef(orbitDistance, 0.0f, 0.0f);
+            glRotatef(axisAngle, 0.0f, 1.0f, 0.0f);
+
+            for(int i = 0; i < sections; ++i)
+            {
+                float phi1 = PI * (-0.5f + (float) i / sections);
+                float phi2 = PI * (-0.5f + (float) (i + 1) / sections);
+
+                glBegin(GL_QUAD_STRIP);
+                for(int j = 0; j <= sections; j++)
+                {
+                    float theta = 2 * PI * (float) j / sections;
+
+                    float x1 = radius * std::cos(phi1) * std::cos(theta);
+                    float y1 = radius * sin(phi1);
+                    float z1 = radius * std::cos(phi1) * sin(theta);
+
+                    float x2 = radius * std::cos(phi2) * std::cos(theta);
+                    float y2 = radius * sin(phi2);
+                    float z2 = radius * std::cos(phi2) * sin(theta);
+
+                    float t1 = (y1 + radius) / (2.0f * radius);
+                    float t2 = (y2 + radius) / (2.0f * radius);
+
+                    glColor3f(
+                        bottomColor.r + t1 * (topColor.r - bottomColor.r),
+                        bottomColor.g + t1 * (topColor.g - bottomColor.g),
+                        bottomColor.b + t1 * (topColor.b - bottomColor.b)
+                    );
+                    glVertex3f(x1, y1, z1);
+
+                    glColor3f(
+                        bottomColor.r + t2 * (topColor.r - bottomColor.r),
+                        bottomColor.g + t2 * (topColor.g - bottomColor.g),
+                        bottomColor.b + t2 * (topColor.b - bottomColor.b)
+                    );
+                    glVertex3f(x2, y2, z2);
+                }
+                glEnd();
+            }
+
+            glPopMatrix();
+        }
+};
+
+Planet sun(0.35f, 24, color(201, 78, 20), color(255, 195, 80), 0.4f, 0.0f, 0.0f);
+Planet earth(0.08f, 15, color(20, 90, 45), color(31, 56, 111), 2.0f, 2.6f, 1.1f);
+Moon earthMoon(0.025f, 12, color(140, 140, 140), color(210, 210, 210), 1.1f, 8.0f, 0.18f, earth);
+
+void display() 
+{
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+
     gluLookAt(camPos.x, camPos.y, camPos.z,
-              camPos.x + camLook.x, camPos.y + camLook.y, camPos.z + camLook.z,
-              camUp.x, camUp.y, camUp.z);
+            camPos.x + camLook.x, camPos.y + camLook.y, camPos.z + camLook.z,
+            camUp.x, camUp.y, camUp.z);
 
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); 
 
-    makeSphere({10, 0, 10}, 1, colors.at("sun"));
-    drawStars();
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_LINE_SMOOTH);
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+    glLineWidth(ORBIT_LINE_WIDTH);
+    glDepthMask(GL_FALSE);
+
+    earth.drawOrbitTrail();
+    earthMoon.drawOrbitTrail();
+
+    glDepthMask(GL_TRUE);
+    glDisable(GL_LINE_SMOOTH);
+    glDisable(GL_BLEND);
+
+    sun.draw();
+    earth.draw();
+    earthMoon.draw();
 
     glutSwapBuffers();
 }
 
-
-void init()
+void timer(int val)
 {
+    sun.update();
+    earth.update();
+    earthMoon.update();
+
+    glutPostRedisplay();
+    glutTimerFunc(16, timer, 0);
+}
+
+int main(int argc, char** argv) {
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+    glutInitWindowPosition(SCREEN_X_OFFSET, SCREEN_Y_OFFSET);
+    glutCreateWindow("Orbit Trail Test Sample");
+
+    //init
     glClearColor(0,0,0,0);
     glEnable(GL_DEPTH_TEST);
-    // glEnable(GL_CULL_FACE);
-    // glCullFace(GL_BACK);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -418,26 +649,18 @@ void init()
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    
-    generateStars();
-}
+    //init
 
-int main(int argc, char* argv[])
-{
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
-    glutInitWindowPosition(SCREEN_X_OFFSET, SCREEN_Y_OFFSET);
-    glutCreateWindow("Solar System");
-    
-    init();
-    
-    glutDisplayFunc(draw);
+    glEnable(GL_DEPTH_TEST);
+    glutDisplayFunc(display);
+    glutTimerFunc(0,timer,0);
+
     glutKeyboardFunc(handleKeys);
     glutSpecialFunc(handleSpecialKeys);
     glutMouseFunc(handleMouse);
     glutReshapeFunc(handleReshape);
     glutPassiveMotionFunc(handlePassiveMotion);
-
+    
     glutMainLoop();
+    return 0;
 }

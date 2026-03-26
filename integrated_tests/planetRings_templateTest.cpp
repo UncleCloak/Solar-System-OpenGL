@@ -1,13 +1,28 @@
 #include <GL/freeglut.h>
 #include <cmath>
-#include <deque>
 #include <GL/glut.h>
 #include <map>
 #include <string>
 
+/*
+* github Handle of students working on this project: ELementaleLord, Faust, uncleCloak
+$ TODO-List:
+$ ASTROID FIELDS
+$ GALAXY SKYBOX 
+& COMPLETED-LIST:
+& MODULAR BLANK PLANET credited to faust
+& 3D CAMERA credited to elementaleLord
+& PLANET GRADIENTS credited to uncleCloak
+& TRUE SOLAR SYSTEM credited to everyone
+& SCATERED STARS credited to elementaleLord 
+& MOONS credited to uncleCloak
+& ORBIT TRAILS credited to uncleCloak
+& PLANET RINGS credited to uncleCloak
+*/
 struct coord
 {
     GLfloat x, y, z;
+    coord(){}
     coord(GLfloat x, GLfloat y, GLfloat z)
     {
         this->x= x; this->y= y; this->z= z;
@@ -17,6 +32,7 @@ struct coord
 struct color
 {
     GLfloat r, g, b;
+    color(){}
     color(GLint r, GLint g, GLint b)
     {
         this->r= r/255.0; this-> g= g/ 255.0; this->b= b/255.0;
@@ -39,38 +55,20 @@ struct color
 #define MOUSE_SENS 0.15f
 #define PI 3.14159265358979323846f
 #define DEGREE_TO_RADIAN_CONVERTION_FACTOR PI / 180.0f
-#define ORBIT_LINE_ALPHA 0.45f
-#define ORBIT_LINE_WIDTH 2.0f
-#define TRAIL_MAX_POINTS 100
 
-coord camPos = {-7.0, 2.7, -7.0};     // 0.0, 0.0, 3.0
-coord camLook= {7.0, -2.7, 7.0};          // 0.0, 0.0, -1.0
-coord camUp  = {0.0, 1.0, 0.0};         // 0.0, 1.0, 0.0
+coord camPos = {-2.0, 3.0, -2.0};
+coord camLook= {2.0, -3.0, 2.0};
+coord camUp  = {0.0, 1.0, 0.0};
 
 float angle= 0.0f;
 float horizentalRotation = 0.0f;
-float verticalRotation = 0.0f;    // 0.0f
+float verticalRotation = 0.0f;
 bool firstMouse = true;
 bool inMouseMode = false;
 int lastMouseX = SCREEN_WIDTH / 2;
 int lastMouseY = SCREEN_HEIGHT / 2;
 int windowCenterX = SCREEN_WIDTH / 2;
 int windowCenterY = SCREEN_HEIGHT / 2;
-
-void init()
-{
-    glClearColor(0,0,0,0);
-    glEnable(GL_DEPTH_TEST);
-    // glEnable(GL_CULL_FACE);
-    // glCullFace(GL_BACK);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(FOV, (GLdouble)SCREEN_WIDTH / (GLdouble)SCREEN_HEIGHT, Z_NEAR, Z_FAR);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-}
 
 coord crossProduct(const coord &a, const coord &b)
 {
@@ -300,7 +298,6 @@ class Planet
         float orbitAngle;
         float orbitSpeed;
         float orbitDistance; // How far from the Sun
-        std::deque<coord> orbitTrail;
 
         Planet(float radius, int sections, const color& bottomColor, const color& topColor, float axisSpd, float orbitSpd, float distance)
             : radius(radius),
@@ -312,12 +309,7 @@ class Planet
               orbitAngle(0.0f),
               orbitSpeed(orbitSpd),
               orbitDistance(distance)
-        {
-            if (orbitDistance > 0.0f)
-            {
-                orbitTrail.push_back(getOrbitPosition());
-            }
-        }
+        {}
 
         void update()
         {
@@ -326,17 +318,6 @@ class Planet
 
             orbitAngle += orbitSpeed;
             if(orbitAngle > 360.0f) orbitAngle -= 360.0f;
-
-            if (orbitDistance > 0.0f)
-            {
-                //! push_back add the current position of the planet so the trail starts rendering
-                orbitTrail.push_back(getOrbitPosition());
-                if (orbitTrail.size() > TRAIL_MAX_POINTS)
-                {
-                    //! pop_front removes the the oldest points to give the dafing out effect
-                    orbitTrail.pop_front();
-                }
-            }
         }
 
         coord getOrbitPosition() const
@@ -398,24 +379,77 @@ class Planet
             glPopMatrix(); 
         }
 
-        void drawOrbitTrail() const
-        {
-            if (orbitTrail.size() < 2) return;
+};
 
-            glBegin(GL_LINE_STRIP);
-            for (size_t i = 0; i < orbitTrail.size(); ++i)
+class Ring : public Planet
+{
+    public:
+        Planet& parentPlanet;
+
+        Ring(float radius, int sections, const color& bottomColor, const color& topColor, float axisSpd, float orbitSpd, float distance, Planet& parent)
+            : Planet(radius, sections, bottomColor, topColor, axisSpd, orbitSpd, distance),
+              parentPlanet(parent)
+        {}
+
+        void update()
+        {
+            axisAngle += axisSpeed;
+            if(axisAngle > 360.0f) axisAngle -= 360.0f;
+
+            orbitAngle += orbitSpeed;
+            if(orbitAngle > 360.0f) orbitAngle -= 360.0f;
+        }
+
+        coord getOrbitPosition() const
+        {
+            return parentPlanet.getOrbitPosition();
+        }
+
+        void draw()
+        {
+            coord parentPosition = parentPlanet.getOrbitPosition();
+            float innerRadius = parentPlanet.radius + orbitDistance;
+            float outerRadius = innerRadius + radius;
+
+            glPushMatrix();
+
+            glTranslatef(parentPosition.x, parentPosition.y, parentPosition.z);
+            glRotatef(parentPlanet.axisAngle, 0.0f, 1.0f, 0.0f);
+            glRotatef(orbitAngle, 0.0f, 1.0f, 0.0f);
+            glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
+            glRotatef(axisAngle, 0.0f, 0.0f, 1.0f);
+
+            glBegin(GL_QUAD_STRIP);
+            for(int i = 0; i <= sections; ++i)
             {
-                float fade = static_cast<float>(i + 1) / static_cast<float>(orbitTrail.size());
-                fade *= fade;
-                glColor4f(topColor.r, topColor.g, topColor.b, ORBIT_LINE_ALPHA * fade);
-                glVertex3f(orbitTrail[i].x, orbitTrail[i].y, orbitTrail[i].z);
+                float theta = 2.0f * PI * (float)i / sections;
+                float cosTheta = std::cos(theta);
+                float sinTheta = std::sin(theta);
+                float t = (float)i / sections;
+
+                glColor3f(
+                    bottomColor.r + t * (topColor.r - bottomColor.r),
+                    bottomColor.g + t * (topColor.g - bottomColor.g),
+                    bottomColor.b + t * (topColor.b - bottomColor.b)
+                );
+                glVertex3f(innerRadius * cosTheta, innerRadius * sinTheta, 0.0f);
+
+                glColor3f(
+                    topColor.r,
+                    topColor.g,
+                    topColor.b
+                );
+                glVertex3f(outerRadius * cosTheta, outerRadius * sinTheta, 0.0f);
             }
             glEnd();
+
+            glPopMatrix();
         }
 };
 
 Planet sun(0.35f, 24, color(201, 78, 20), color(255, 195, 80), 0.4f, 0.0f, 0.0f);
 Planet earth(0.08f, 15, color(20, 90, 45), color(31, 56, 111), 2.0f, 2.6f, 1.1f);
+Ring earthRing(0.05f, 48, color(140, 130, 110), color(210, 200, 175), 0.4f, 1.0f, 0.03f, earth);
 
 void display() 
 {
@@ -430,21 +464,9 @@ void display()
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); 
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_LINE_SMOOTH);
-    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-    glLineWidth(ORBIT_LINE_WIDTH);
-    glDepthMask(GL_FALSE);
-
-    earth.drawOrbitTrail();
-
-    glDepthMask(GL_TRUE);
-    glDisable(GL_LINE_SMOOTH);
-    glDisable(GL_BLEND);
-
     sun.draw();
     earth.draw();
+    earthRing.draw();
 
     glutSwapBuffers();
 }
@@ -453,6 +475,7 @@ void timer(int val)
 {
     sun.update();
     earth.update();
+    earthRing.update();
 
     glutPostRedisplay();
     glutTimerFunc(16, timer, 0);
@@ -463,9 +486,19 @@ int main(int argc, char** argv) {
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
     glutInitWindowPosition(SCREEN_X_OFFSET, SCREEN_Y_OFFSET);
-    glutCreateWindow("Orbit Trail Testing");
+    glutCreateWindow("Planet Rings Test Sample");
 
-    init();
+    //init
+    glClearColor(0,0,0,0);
+    glEnable(GL_DEPTH_TEST);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(FOV, (GLdouble)SCREEN_WIDTH / (GLdouble)SCREEN_HEIGHT, Z_NEAR, Z_FAR);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    //init
 
     glEnable(GL_DEPTH_TEST);
     glutDisplayFunc(display);

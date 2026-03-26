@@ -1,11 +1,28 @@
+#include <GL/freeglut.h>
+#include <cmath>
 #include <GL/glut.h>
 #include <map>
 #include <string>
-#include <cmath>
 
+/*
+* github Handle of students working on this project: ELementaleLord, Faust, uncleCloak
+$ TODO-List:
+$ TRUE SOLAR SYSTEM
+$ SCATERED STARS
+$ MOONS
+$ ORBIT TRAILS
+$ PLANET RINGS
+$ ASTROID FIELDS
+$ GALAXY SKYBOX 
+& COMPLETED-LIST:
+& MODULAR BLANK PLANET credited to faust
+& 3D CAMERA credited to elementaleLord
+& PLANET GRADIENTS credited to uncleCloak
+*/
 struct coord
 {
     GLfloat x, y, z;
+    coord(){}
     coord(GLfloat x, GLfloat y, GLfloat z)
     {
         this->x= x; this->y= y; this->z= z;
@@ -15,6 +32,7 @@ struct coord
 struct color
 {
     GLfloat r, g, b;
+    color(){}
     color(GLint r, GLint g, GLint b)
     {
         this->r= r/255.0; this-> g= g/ 255.0; this->b= b/255.0;
@@ -76,20 +94,24 @@ const std::map<std::string, color> colors=
 #define VERTICAL_ROTATION_POS_LIMIT 89.0f
 #define VERTICAL_ROTATION_NEG_LIMIT -89.0f
 #define FOV 60
-#define MOVE_SPEED 1.0f
+#define MOVE_SPEED 0.5f
 #define ZOOM_SPEED 0.3f
 #define Z_NEAR 0.1f
 #define Z_FAR 500.0f
 #define MOUSE_SENS 0.15f
 #define PI 3.14159265358979323846f
 #define DEGREE_TO_RADIAN_CONVERTION_FACTOR PI / 180.0f
+#define starTotal 1000
+#define starDistMin 2
+#define starDistRange 100
+#define starPointScale 1.5
 
-coord camPos= {0.0, 0.0, 3.0};
-coord camLook= {0.0, 0.0, -1.0};
-coord camUp= {0.0, 1.0, 0.0};
+coord camPos = {-7.0, 2.7, -7.0};
+coord camLook= {7.0, -2.7, 7.0};
+coord camUp  = {0.0, 1.0, 0.0};
 
 float angle= 0.0f;
-float horizentalRotation = -90.0f;
+float horizentalRotation = 0.0f;
 float verticalRotation = 0.0f;
 bool firstMouse = true;
 bool inMouseMode = false;
@@ -97,21 +119,6 @@ int lastMouseX = SCREEN_WIDTH / 2;
 int lastMouseY = SCREEN_HEIGHT / 2;
 int windowCenterX = SCREEN_WIDTH / 2;
 int windowCenterY = SCREEN_HEIGHT / 2;
-
-void init()
-{
-    glClearColor(0,0,0,0);
-    glEnable(GL_DEPTH_TEST);
-    // glEnable(GL_CULL_FACE);
-    // glCullFace(GL_BACK);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(FOV, (GLdouble)SCREEN_WIDTH / (GLdouble)SCREEN_HEIGHT, Z_NEAR, Z_FAR);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-}
 
 coord crossProduct(const coord &a, const coord &b)
 {
@@ -157,7 +164,6 @@ void handlePassiveMotion(int x, int y)
         if (verticalRotation < VERTICAL_ROTATION_NEG_LIMIT) verticalRotation = VERTICAL_ROTATION_NEG_LIMIT;
 
         updateCamLook();
-
         //# centralize cursor to prevent continuous movement crossing the window boundary
         glutWarpPointer(windowCenterX, windowCenterY);//# moves cursor to the given x, y position
 
@@ -166,6 +172,7 @@ void handlePassiveMotion(int x, int y)
         lastMouseY = windowCenterY;
 
         glutPostRedisplay();//# call to reDisplay stuff after moving camera
+        // printf("camPos= {%d, %d, %d} camLook= {%d, %d, %d} camUp= {%d, %d, %d}\n", camPos.x, camPos.y, camPos.z, camLook.x, camLook.y, camLook.z, camUp.x, camUp.y, camUp.z);
     }
 }
 
@@ -348,69 +355,160 @@ void handleReshape(int width, int height)
     glLoadIdentity();
 }
 
-void makeSphere(coord center, GLfloat radius, color c)
+class Planet
 {
-    glColor3f(c.r, c.g, c.b);
-    glPushMatrix();
-    glTranslatef(center.x, center.y, center.z);
-    glutSolidSphere(radius, 16, 4);
-    glPopMatrix();
-}
+    public:
+        float radius;
+        int sections;
+        color bottomColor;
+        color topColor;
+        
+        float axisAngle;
+        float axisSpeed;
 
-void draw()
+        float orbitAngle;
+        float orbitSpeed;
+        float orbitDistance; // How far from the Sun
+
+        Planet(float radius, int sections, const color& bottomColor, const color& topColor, float axisSpd, float orbitSpd, float distance)
+            : radius(radius),
+              sections(sections),
+              bottomColor(bottomColor),
+              topColor(topColor),
+              axisAngle(0.0f),
+              axisSpeed(axisSpd),
+              orbitAngle(0.0f),
+              orbitSpeed(orbitSpd),
+              orbitDistance(distance)
+        {
+        }
+
+        void update()
+        {
+            axisAngle += axisSpeed;
+            if(axisAngle > 360.0f) axisAngle -= 360.0f;
+
+            orbitAngle += orbitSpeed;
+            if(orbitAngle > 360.0f) orbitAngle -= 360.0f;
+        }
+
+        void draw()
+        {
+            glPushMatrix(); 
+
+            glRotatef(orbitAngle, 0.0f, 1.0f, 0.0f);
+            glTranslatef(orbitDistance, 0.0f, 0.0f);
+            glRotatef(axisAngle, 0.0f, 1.0f, 0.0f);
+
+            for(int i = 0; i < sections; ++i)
+            {
+                float phi1 = PI * (-0.5f + (float) i / sections);
+                float phi2 = PI * (-0.5f + (float) (i + 1) / sections);
+
+                glBegin(GL_QUAD_STRIP);
+                for(int j = 0; j <= sections; j++)
+                {
+                    float theta = 2 * PI * (float) j / sections;
+
+                    float x1 = radius * std::cos(phi1) * std::cos(theta);
+                    float y1 = radius * sin(phi1);
+                    float z1 = radius * std::cos(phi1) * sin(theta);
+
+                    float x2 = radius * std::cos(phi2) * std::cos(theta);
+                    float y2 = radius * sin(phi2);
+                    float z2 = radius * std::cos(phi2) * sin(theta);
+
+                    float t1 = (y1 + radius) / (2.0f * radius);
+                    float t2 = (y2 + radius) / (2.0f * radius);
+
+                    glColor3f(
+                        bottomColor.r + t1 * (topColor.r - bottomColor.r),
+                        bottomColor.g + t1 * (topColor.g - bottomColor.g),
+                        bottomColor.b + t1 * (topColor.b - bottomColor.b)
+                    );
+                    glVertex3f(x1, y1, z1);
+
+                    glColor3f(
+                        bottomColor.r + t2 * (topColor.r - bottomColor.r),
+                        bottomColor.g + t2 * (topColor.g - bottomColor.g),
+                        bottomColor.b + t2 * (topColor.b - bottomColor.b)
+                    );
+                    glVertex3f(x2, y2, z2);
+                }
+                glEnd();
+            }
+            
+            glPopMatrix(); 
+        }
+};
+
+Planet sun(0.35f, 24, color(201, 78, 20), color(255, 195, 80), 0.4f, 0.0f, 0.0f);
+Planet mercury(0.04f, 12, color(120, 118, 117), color(191, 189, 188), 1.2f, 4.2f, 0.55f);
+Planet venus(0.07f, 14, color(160, 120, 88), color(218, 178, 146), 0.8f, 3.2f, 0.8f);
+Planet earth(0.08f, 15, color(20, 90, 45), color(31, 56, 111), 2.0f, 2.6f, 1.1f);
+Planet mars(0.06f, 13, color(166, 72, 52), color(242, 124, 95), 1.8f, 2.1f, 1.45f);
+Planet jupiter(0.18f, 18, color(140, 120, 98), color(191, 176, 156), 2.8f, 1.1f, 2.1f);
+Planet saturn(0.15f, 18, color(168, 138, 78), color(218, 183, 120), 2.4f, 0.85f, 2.7f);
+Planet uranus(0.11f, 16, color(140, 190, 198), color(207, 236, 240), 1.9f, 0.55f, 3.2f);
+Planet neptune(0.11f, 16, color(60, 95, 150), color(120, 158, 191), 1.7f, 0.4f, 3.7f);
+
+void display() 
 {
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    //set camera up
-    gluLookAt(camPos.x, camPos.y, camPos.z, 
-            camPos.x+ camLook.x, camPos.y+ camLook.y, camPos.z+ camLook.z,
+    gluLookAt(camPos.x, camPos.y, camPos.z,
+            camPos.x + camLook.x, camPos.y + camLook.y, camPos.z + camLook.z,
             camUp.x, camUp.y, camUp.z);
-    /*
-    planet      radius      orbit radius
-    Sun         6.183	    0
-    Mercury 	0.02167 	2.572
-    Venus 	    0.05374 	4.806
-    Earth 	    0.05658 	6.644
-    Mars 	    0.03011 	10.12
 
-    Jupiter 	0.6209 	    34.58
-    Saturn 	    0.5174 	    63.65
-    Uranus 	    0.2253 	    127.8
-    Neptune 	0.2187 	    200.0
-    */
-    float sunRad= 6.183 * 0.5;
-    makeSphere({0, 0, 0}, sunRad, colors.at("sun"));// Sun
-    makeSphere({2.572 * 5, 0, 0}, 0.52167 * 0.5, colors.at("mercury"));// Mercury
-    makeSphere({4.806 * 5, 0, 0}, 0.55374 * 0.5, colors.at("venus"));// Venus
-    makeSphere({6.644 * 5, 0, 0}, 0.55658 * 0.5, colors.at("earth"));// Earth
-    makeSphere({10.12 * 5, 0, 0}, 0.53011 * 0.5, colors.at("mars"));// Mars
-    makeSphere({34.58 * 5, 0, 0}, 1.1209 * 0.5, colors.at("jupiter"));// Jupiter
-    makeSphere({63.65 * 5, 0, 0}, 1.0174 * 0.5, colors.at("saturn"));// Saturn
-    makeSphere({127.8 * 5, 0, 0}, 0.7253 * 0.5, colors.at("uranus"));// Uranus
-    makeSphere({200.0 * 5, 0, 0}, 0.7187 * 0.5, colors.at("neptune"));// Neptune
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); 
+
+    sun.draw();
+    earth.draw();
 
     glutSwapBuffers();
 }
 
-int main(int argc, char* argv[])
+void timer(int val)
 {
+    sun.update();
+    earth.update();
+
+    glutPostRedisplay();
+    glutTimerFunc(16, timer, 0);
+}
+
+int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT);
     glutInitWindowPosition(SCREEN_X_OFFSET, SCREEN_Y_OFFSET);
-    glutCreateWindow("Solar System");
-    
-    init();
-    
-    glutDisplayFunc(draw);
+    glutCreateWindow("Planet Static Gradient Test Sample");
+
+    //init
+    glClearColor(0,0,0,0);
+    glEnable(GL_DEPTH_TEST);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(FOV, (GLdouble)SCREEN_WIDTH / (GLdouble)SCREEN_HEIGHT, Z_NEAR, Z_FAR);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    //init
+
+    glEnable(GL_DEPTH_TEST);
+    glutDisplayFunc(display);
+    glutTimerFunc(0,timer,0);
+
     glutKeyboardFunc(handleKeys);
     glutSpecialFunc(handleSpecialKeys);
     glutMouseFunc(handleMouse);
     glutReshapeFunc(handleReshape);
     glutPassiveMotionFunc(handlePassiveMotion);
-
+    
     glutMainLoop();
-
+    return 0;
 }

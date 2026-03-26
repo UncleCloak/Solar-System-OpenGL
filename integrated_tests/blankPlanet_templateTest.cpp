@@ -4,6 +4,20 @@
 #define PI 3.141592653589f
 #define SCREEN_SIZE 800
 
+/*
+* github Handle of students working on this project: ELementaleLord, Faust, uncleCloak
+$ TODO-List:
+$ 3D CAMERA
+$ TRUE SOLAR SYSTEM
+$ SCATERED STARS
+$ MOONS
+$ ORBIT TRAILS
+$ PLANET RINGS
+$ ASTROID FIELDS
+$ GALAXY SKYBOX 
+& COMPLETED-LIST:
+& MODULAR BLANK PLANET credited to faust
+*/
 class Planet
 {
     public:
@@ -110,7 +124,7 @@ int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(SCREEN_SIZE, SCREEN_SIZE);
-    glutCreateWindow("OpenGL Sphere Math Test");
+    glutCreateWindow("Blank Planet Test Sample");
 
     glEnable(GL_DEPTH_TEST);
     glutDisplayFunc(display);
