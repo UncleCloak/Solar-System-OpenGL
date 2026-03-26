@@ -111,7 +111,7 @@ int windowCenterY = SCREEN_HEIGHT / 2;
 
 
 #define SCREEN_SIZE 800
-#define StarTotal 2000
+#define StarTotal 1000
 star starPosArr[StarTotal];
 
 coord crossProduct(const coord &a, const coord &b)
@@ -365,7 +365,7 @@ void makeSphere(coord center, GLfloat radius, color c)
 #define starPointScale 1.5
 
 void generateStars(){
-    for (int i= 0; i< StarTotal; ){
+    for (int i= 0; i< StarTotal; i++ ){
 
         float theta=    ((float)rand() / RAND_MAX) * 2.0f * PI;
         float phi=      acosf(1.0f - 2.0f * ((float)rand() / RAND_MAX));// vertical angle
