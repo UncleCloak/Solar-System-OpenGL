@@ -1,24 +1,23 @@
+#define STB_IMAGE_IMPLEMENTATION
+#include "..//include//stb_image.h"
+
+#ifdef _WIN32
+#  include <windows.h>
+#endif
 #include <GL/freeglut.h>
 #include <cmath>
 #include <deque>
 #include <GL/glut.h>
 #include <map>
 #include <string>
+#include <math.h>
+#include <stdio.h>
 
+#ifndef GL_CLAMP_TO_EDGE
+#define GL_CLAMP_TO_EDGE 0x812F
+#endif
 /*
 * github Handle of students working on this project: ELementaleLord, Faust, uncleCloak
-$ TODO-List:
-$ ASTROID FIELDS
-$ GALAXY SKYBOX 
-& COMPLETED-LIST:
-& MODULAR BLANK PLANET credited to faust
-& 3D CAMERA credited to elementaleLord
-& PLANET GRADIENTS credited to uncleCloak
-& TRUE SOLAR SYSTEM credited to everyone
-& SCATERED STARS credited to elementaleLord 
-& MOONS credited to uncleCloak
-& ORBIT TRAILS credited to uncleCloak
-& PLANET RINGS credited to uncleCloak
 */
 struct coord
 {
@@ -86,6 +85,15 @@ const std::map<std::string, color> colors=
     {"neptune", {120, 158, 191}},
 };
 
+static const char *faceFiles[6] = {
+    "..\\assets\\galaxy.png", // right
+    "..\\assets\\galaxy.png", // left
+    "..\\assets\\galaxy.png", // top
+    "..\\assets\\galaxy.png", // bottom
+    "..\\assets\\galaxy.png", // front
+    "..\\assets\\galaxy.png", // back
+};
+
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 #define SCREEN_X_OFFSET 300
@@ -111,19 +119,20 @@ const std::map<std::string, color> colors=
 #define TRAIL_MAX_POINTS 100
 #define MOON_TRAIL_MAX_POINTS (TRAIL_MAX_POINTS / 10)
 
-coord camPos = {-7.0, 2.7, -7.0};     // 0.0, 0.0, 3.0
-coord camLook= {7.0, -2.7, 7.0};          // 0.0, 0.0, -1.0
-coord camUp  = {0.0, 1.0, 0.0};         // 0.0, 1.0, 0.0
+coord camPos = {-7.0, 2.7, -7.0};
+coord camLook= {7.0, -2.7, 7.0};
+coord camUp  = {0.0, 1.0, 0.0};
 
 float angle= 0.0f;
 float horizentalRotation = 0.0f;
-float verticalRotation = 0.0f;    // 0.0f
+float verticalRotation = 0.0f;
 bool firstMouse = true;
 bool inMouseMode = false;
 int lastMouseX = SCREEN_WIDTH / 2;
 int lastMouseY = SCREEN_HEIGHT / 2;
 int windowCenterX = SCREEN_WIDTH / 2;
 int windowCenterY = SCREEN_HEIGHT / 2;
+static GLuint skyTextures[6];
 
 coord crossProduct(const coord &a, const coord &b)
 {
@@ -132,6 +141,33 @@ coord crossProduct(const coord &a, const coord &b)
         a.z * b.x - a.x * b.z,
         a.x * b.y - a.y * b.x
     );
+}
+
+//~ returns the textures from given files
+static GLuint loadTexture(const char *filename)
+{
+    int w, h, channels;
+    unsigned char *data = stbi_load(filename, &w, &h, &channels, 4);
+    if (!data) {
+        fprintf(stderr, "ERROR: could not load '%s': %s\n", filename, stbi_failure_reason());
+        return 0;
+    }
+
+    GLuint id;
+    glGenTextures(1, &id);
+    glBindTexture(GL_TEXTURE_2D, id);
+
+    //# No mipmaps so we must clamp to edge so seams dont show
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, data);
+
+    stbi_image_free(data);
+    return id;
 }
 
 //~ calculation to move the cameraLook vector based on 2D rotation
@@ -675,7 +711,8 @@ struct star{
 };
 star starPosArr[starTotal];
 
-void generateStars(){
+void generateStars()
+{
     for (int i= 0; i< starTotal; i++ ){
 
         float theta=    ((float)rand() / RAND_MAX) * 2.0f * PI;
@@ -688,7 +725,9 @@ void generateStars(){
         // printf("x= %f, y=%f, z=%f\n", starPosArr[i].p.x, starPosArr[i].p.y, starPosArr[i].p.z);
     }
 }
-void drawStars(){
+
+void drawStars()
+{
     glPointSize(starPointScale);
     glBegin(GL_POINTS);
     for (int i= 0; i< starTotal; i++){
@@ -698,19 +737,89 @@ void drawStars(){
     glEnd();
 }
 
+static void drawSkybox(void)
+{
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_LIGHTING);
+    glEnable(GL_TEXTURE_2D);
+
+    //# Right
+    glBindTexture(GL_TEXTURE_2D, skyTextures[0]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0,1); glVertex3f( 1,-1, 1);
+        glTexCoord2f(1,1); glVertex3f( 1,-1,-1);
+        glTexCoord2f(1,0); glVertex3f( 1, 1,-1);
+        glTexCoord2f(0,0); glVertex3f( 1, 1, 1);
+    glEnd();
+
+    //# Left
+    glBindTexture(GL_TEXTURE_2D, skyTextures[1]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0,1); glVertex3f(-1,-1,-1);
+        glTexCoord2f(1,1); glVertex3f(-1,-1, 1);
+        glTexCoord2f(1,0); glVertex3f(-1, 1, 1);
+        glTexCoord2f(0,0); glVertex3f(-1, 1,-1);
+    glEnd();
+
+    //# Top
+    glBindTexture(GL_TEXTURE_2D, skyTextures[2]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0,1); glVertex3f(-1, 1, 1);
+        glTexCoord2f(1,1); glVertex3f( 1, 1, 1);
+        glTexCoord2f(1,0); glVertex3f( 1, 1,-1);
+        glTexCoord2f(0,0); glVertex3f(-1, 1,-1);
+    glEnd();
+
+    //# Bottom
+    glBindTexture(GL_TEXTURE_2D, skyTextures[3]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0,1); glVertex3f(-1,-1,-1);
+        glTexCoord2f(1,1); glVertex3f( 1,-1,-1);
+        glTexCoord2f(1,0); glVertex3f( 1,-1, 1);
+        glTexCoord2f(0,0); glVertex3f(-1,-1, 1);
+    glEnd();
+
+    //# Front
+    glBindTexture(GL_TEXTURE_2D, skyTextures[4]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0,1); glVertex3f(-1,-1, 1);
+        glTexCoord2f(1,1); glVertex3f( 1,-1, 1);
+        glTexCoord2f(1,0); glVertex3f( 1, 1, 1);
+        glTexCoord2f(0,0); glVertex3f(-1, 1, 1);
+    glEnd();
+
+    //# Back
+    glBindTexture(GL_TEXTURE_2D, skyTextures[5]);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0,1); glVertex3f( 1,-1,-1);
+        glTexCoord2f(1,1); glVertex3f(-1,-1,-1);
+        glTexCoord2f(1,0); glVertex3f(-1, 1,-1);
+        glTexCoord2f(0,0); glVertex3f( 1, 1,-1);
+    glEnd();
+
+    //# Reset to "default"
+    glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_TEXTURE_2D);
+}
+
 void display() 
 {
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    glRotatef(verticalRotation, 1, 0, 0);
+    glRotatef(horizentalRotation,   0, 1, 0);
+    drawSkybox();
 
+    glLoadIdentity();
     gluLookAt(camPos.x, camPos.y, camPos.z,
             camPos.x + camLook.x, camPos.y + camLook.y, camPos.z + camLook.z,
             camUp.x, camUp.y, camUp.z);
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); 
-
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_LINE_SMOOTH);
@@ -803,6 +912,15 @@ int main(int argc, char** argv) {
     glLoadIdentity();
 
     generateStars();
+    int allLoaded = 1;
+    for (int i = 0; i < 6; i++) {
+        skyTextures[i] = loadTexture(faceFiles[i]);
+        if (skyTextures[i] == 0) allLoaded = 0;
+    }
+    if (!allLoaded) {
+        fprintf(stderr, "One or more textures failed to load. Check filenames.\n");
+        /* We continue anyway so you can see the window; missing faces = black */
+    }
     //init
 
     glEnable(GL_DEPTH_TEST);
