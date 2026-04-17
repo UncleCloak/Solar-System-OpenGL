@@ -11,5 +11,3 @@ This project aims to simulate an animated solar system on your computer, coded e
   - Earth's Moon and Mars's Moons
   - Jupiter's, Saturn's, Uranus's and Neptune's Rings (accurate roated angle)
   - Stars scattered across
-  - The 2 Asteroid Belts
-  - Comets / Meteors
