@@ -98,12 +98,12 @@ const std::map<std::string, color> colors=
 };
 
 static const char *faceFiles[6] = {
-    "..\\assets\\galaxy.png", // right
-    "..\\assets\\galaxy.png", // left
-    "..\\assets\\galaxy.png", // top
-    "..\\assets\\galaxy.png", // bottom
-    "..\\assets\\galaxy.png", // front
-    "..\\assets\\galaxy.png", // back
+    "..\\assets\\right.png", // right
+    "..\\assets\\left.png", // left
+    "..\\assets\\top.png", // top
+    "..\\assets\\bottom.png", // bottom
+    "..\\assets\\front.png", // front
+    "..\\assets\\back.png", // back
 };
 
 #define SCREEN_WIDTH 800
