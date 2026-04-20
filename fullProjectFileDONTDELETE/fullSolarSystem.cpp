@@ -112,8 +112,8 @@ static const char *faceFiles[6] = {
 #define SCREEN_Y_OFFSET 100
 #define VIEWPORT_X 0
 #define VIEWPORT_Y 0
-#define VERTICAL_ROTATION_POS_LIMIT 89.0f
-#define VERTICAL_ROTATION_NEG_LIMIT -89.0f
+#define VERTICAL_ROTATION_POS_LIMIT 89.9f
+#define VERTICAL_ROTATION_NEG_LIMIT -89.9f
 #define FOV 60
 #define MOVE_SPEED 0.5f
 #define ZOOM_SPEED 0.3f
