@@ -122,7 +122,7 @@ static const char *faceFiles[6] = {
 #define MOUSE_SENS 0.15f
 #define PI 3.14159265358979323846f
 #define DEGREE_TO_RADIAN_CONVERTION_FACTOR PI / 180.0f
-#define starTotal 1000
+#define starTotal 0
 #define starDistMin 2
 #define starDistRange 100
 #define starPointScale 1.5
